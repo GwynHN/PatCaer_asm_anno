@@ -59,15 +59,18 @@ $ /usr/local/merqury-1.3/merqury.sh Pcaer_hifi_k21.meryl Pcaer_l3_s035v0.19.6.bp
 
 ## Repeat Masking
 
-Run RepeatModeler filtered assembly and combine families with mollusca lineage repeats from DFam
+Run RepeatModeler filtered assembly and combine families with mollusca lineage repeats from DFam. Run RepeatMasker
 
 ```
-$ BuildDatabase -name Pcaer1 PatCaer1.fa
+## RepeatModeler
+$ BuildDatabase -name Pcaer1_rep PatCaer1.fa
 $ RepeatModeler -database Pcaer1_rep -pa 4 -LTRStruct 
 
 ## extract the lineage specific family sequences
-$ python3 /usr/local/miniconda3/envs/repeatmasker/share/RepeatMasker/famdb.py -i /usr/local/miniconda3/envs/repeatmasker/share/RepeatMasker/Libraries/Dfam.h5 families -ad mollusca -f fasta_acc > mollusca_DFam.fa
+$ python3 RepeatMasker/famdb.py -i RepeatMasker/Libraries/Dfam.h5 families -ad mollusca -f fasta_acc > mollusca_DFam.fa
 $ cat Pcaer1_rep.fa mollusca_DFam.fa > Pcaer1_mollusca.lib.fa
+
+## RepeatMasker
 $ RepeatMasker -pa 8 -xsmall -gccalc -lib Pcaer1_mollusca.lib.fa PatCaer1.fa -gff
 ```
 
@@ -88,7 +91,13 @@ $ braker.pl --genome PatCaer1.masked.fa --bam patella_totalRNA.bam --softmasking
 $ braker.pl --genome PatCaer1.masked.fa --prot_seq=orthoDB/metazoa_odbv11.fa --softmasking --cores 8 species="patella_metazoa_odbv11" --workingdir="patella_metazoav11_prot"
 
 ## Combine gene models
-$ ~/GHN/p1010_patella_AlexWeber/10_BRAKER/03_tsebra/TSEBRA/bin/tsebra.py -g patella_total_RNA/augustus.hints.gtf,patella_metazoav11_prot/augustus.hints.gtf -e patella_total_RNA/hintsfile.gff,patella_metazoav11_prot/hintsfile.gff -o Pcaer_totalRNA_metazoaODBv11_ignore_phase.gtf --ignore_tx_phase
+$ TSEBRA/bin/tsebra.py -g patella_total_RNA/braker.gtf,patella_metazoav11_prot/braker.gtf -e patella_total_RNA/hintsfile.gff,patella_metazoav11_prot/hintsfile.gff -o Pcaer_totalRNA_metazoaODBv11_brakerGTF_ignore_phase.gtf --ignore_tx_phase
+
+## Rename and convert to GFF3
+$ TSEBRA/bin/rename_gtf.py --gtf Pcaer_totalRNA_metazoaODBv11_brakerGTF_ignore_phase.gtf --out Pcaer_totalRNA_metazoaODBv11_brakerGTF_ignore_phase.rename.gtf --translation_tab Pcaer_totalRNA_metazoaODBv11_brakerGTF_ignore_phase_renamed_genes.txt --prefix PatCaer1
+$ Augustus-3.5.0/scripts/gtf2gff.pl < Pcaer_totalRNA_metazoaODBv11_brakerGTF_ignore_phase.rename.gtf --out PatCaer1.gff3
 ```
+
+
 
 
