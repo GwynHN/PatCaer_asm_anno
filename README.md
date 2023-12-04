@@ -24,10 +24,10 @@ A bash script to convert hifiasm GFA to FASTA format and assess basic statistics
 $ bash scripts/run_asmstats.sh Pcaer_l3_s035v0.19.6.bp.p_ctg.gfa
 ```
 
-A script to calculate GC content using seqtk.
+Calculate GC content using seqtk.
 
 ```
-$ bash scripts/GC_propN_per_scaffold.sh Pcaer_l3_s035v0.19.6.bp.p_ctg.fa | cut -f 1,14 > GC_contigs_Pcaer_l3_s035v0.19.6_primary.txt
+$ seqtk comp Pcaer_l3_s035v0.19.6.bp.p_ctg.fa | awk -v OFS='\t' '{$14 = ($4 + $5) / ($3 + $4 + $5 + $6); $15 = $9 / $2}1' | sort -n -r -k 2 > GC_propN_Pcaer_l3_s035v0.19.6_primary.txt
 ```
 
 To calculate the mean coverage of HiFi reads mapped back to assembly. Reads are mapped using minimap2 and mean coverage (mean depth) is calculated using samtools. 
