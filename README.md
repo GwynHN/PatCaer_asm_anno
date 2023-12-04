@@ -1,4 +1,4 @@
-# PatCaer_asm_anno
+# PatCaer1 Assembly
 
 ## kmer frequencies
 
@@ -33,25 +33,62 @@ $ bash scripts/GC_hifiCov.sh Pcaer_l3_s035v0.19.6.bp.p_ctg.fa
 To calculate the mean coverage of HiFi reads mapped back to assembly. Reads are mapped using minimap2 and mean coverage (mean depth) is calculated using samtools. 
 
 ```
-$ bash scripts/run_XXXXX.sh
+$ minimap2 -xmap-hifi -c -t 12 Pcaer_l3_s035v0.19.6.bp.p_ctg.fa -a m64141e_230805_003202.hifi_reads.fastq.gz | samtools view -b -@ 8 | samtools sort -@ 8 -o Pcaer_l3_s035v0.19.6_prim_hifi.sorted.bam
+$ samtools coverage Pcaer_l3_s035v0.19.6_prim_hifi.sorted.bam > Pcaer_l3_s035v0.19.6_prim_hifi_cov_stats.txt
 ```
 
 Contigs were classified using Tiara to check for contaminants and find candidate mitchondrial contigs.
 
 ```
-$ tiara -i 03_hifiasm/Pcaer_l3_s035v0.19.6 -o tiara_Pcaer_s035
-dups.txt --gzip -t 8 --pr
+$ tiara -i Pcaer_l3_s035v0.19.6.bp.p_ctg.fa -o tiara_Pcaer_s035 --gzip -t 8 --pr
 ```
 
-BUSCO v5.2.2 (CHECK) using MetaEuk.
+BUSCO v5.2.2 
 
 ```
-$ busco -c 24 -o mollusca_prim_PatCaer -i Pcaer_l3_s035.bp.p_ctg.fa -l orthoDB/mollusca_odb10 -m genome
+$ busco -c 24 -o mollusca_prim_PatCaer -i Pcaer_l3_s035v0.19.6.bp.p_ctg.fa -l orthoDB/mollusca_odb10 -m genome
 ```
 
 Merqury kmer copy number analysis
 
 ```
-$ /usr/local/merqury-1.3/merqury.sh 02_kmer_genomescope/Pcaer_hifi_k21.meryl 03_hifiasm/Pcaer_l3_default/Pcaer_l3_s035.bp.p_ctg.fa Pcaer_l3_prim
+$ /usr/local/merqury-1.3/merqury.sh Pcaer_hifi_k21.meryl Pcaer_l3_s035v0.19.6.bp.p_ctg.fa Pcaer_l3_s035_primary
 ```
+
+# PatCaer1 Annotation
+
+## Repeat Masking
+
+Run RepeatModeler filtered assembly and combine families with mollusca lineage repeats from DFam
+
+```
+$ BuildDatabase -name Pcaer1 PatCaer1.fa
+$ RepeatModeler -database Pcaer1_rep -pa 4 -LTRStruct 
+
+## extract the lineage specific family sequences
+$ python3 /usr/local/miniconda3/envs/repeatmasker/share/RepeatMasker/famdb.py -i /usr/local/miniconda3/envs/repeatmasker/share/RepeatMasker/Libraries/Dfam.h5 families -ad mollusca -f fasta_acc > mollusca_DFam.fa
+$ cat Pcaer1_rep.fa mollusca_DFam.fa > Pcaer1_mollusca.lib.fa
+$ RepeatMasker -pa 8 -xsmall -gccalc -lib Pcaer1_mollusca.lib.fa PatCaer1.fa -gff
+```
+
+## RNAseq alignment
+
+```
+$ hisat2 -x PatCaer1.masked.fa -1 Patella-total-RNA_S104_R1_001.fastq.gz -2 Patella-total-RNA_S104_R2_001.fastq.gz -p 8 -S patella_totalRNA.sam
+$ samtools view -@ 8 -b patella_totalRNA.sam -o patella_totalRNA.bam
+```
+
+## BRAKER1 + BRAKER2 + TSEBRA
+
+```
+## RNA evidence
+$ braker.pl --genome PatCaer1.masked.fa --bam patella_totalRNA.bam --softmasking --cores 8 --species=Patella_total --workingdir="patella_total_RNA"
+
+## Protein evidence
+$ braker.pl --genome PatCaer1.masked.fa --prot_seq=orthoDB/metazoa_odbv11.fa --softmasking --cores 8 species="patella_metazoa_odbv11" --workingdir="patella_metazoav11_prot"
+
+## Combine gene models
+$ ~/GHN/p1010_patella_AlexWeber/10_BRAKER/03_tsebra/TSEBRA/bin/tsebra.py -g patella_total_RNA/augustus.hints.gtf,patella_metazoav11_prot/augustus.hints.gtf -e patella_total_RNA/hintsfile.gff,patella_metazoav11_prot/hintsfile.gff -o Pcaer_totalRNA_metazoaODBv11_ignore_phase.gtf --ignore_tx_phase
+```
+
 
