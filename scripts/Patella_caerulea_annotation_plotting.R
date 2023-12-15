@@ -114,6 +114,7 @@ ggplot(data=plotDF, aes(x=name, y=length, fill=feature)) +
   annotation_logticks(sides = "l") +
   ggtitle("Patella annotation feature length comparison") + 
   theme_bw() +
+  theme(axis.text.x = element_text(face = "italic")) +
   xlab("Species") +
   ylab("Feature length") + 
   guides(fill=guide_legend(title="Feature"))
